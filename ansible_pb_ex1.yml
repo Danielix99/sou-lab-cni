@@ -90,9 +90,10 @@
             option nolinger
             maxconn 8000
             timeout client 30s
-            default_backend grafana
-            acl is_grafana hdr_dom(host) -i grafana.local use_backend grafana if is_grafana
-            acl is_prometheus hdr(host) -i prometheus.local use_backend prometheus if is_prometheus
+            acl is_grafana hdr_beg(host) -i grafana.local
+            use_backend grafana if is_grafana
+            acl is_prometheus hdr_beg(host) -i prometheus.local
+            use_backend prometheus if is_prometheus
 
           backend grafana
             mode http
