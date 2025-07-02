@@ -5,6 +5,12 @@
       package:
         name: "podman"
         state: present
+    - name: Init Podman
+      ansible.builtin.command: podman machine init
+      ignore_errors: true
+    - name: Start Podman
+      ansible.builtin.command: podman machine start
+      ignore_errors: true
     - name: Crea cartella volumi
       file:
         path: ./volumi
@@ -40,21 +46,26 @@
         path: ./volumi/grafana/config
         state: directory
         mode: '0755'
+    - name: Crea cartella ds Grafana
+      file:
+        path: ./volumi/grafana/ds
+        state: directory
+        mode: '0755'
     - name: Crea config Prometheus
       copy:
         dest: "./volumi/prometheus/config/prom.yml"
         content: |
           global:
             scrape_interval:  15s
-            evaluation_interval:  15s
-
+            external_labels:
+              monitor: 'prom-monitor'
           scrape_configs:
             - job_name: 'prometheus'
               static_configs:
-                - targets: ['prometheus:9090']
-    - name: Crea config Grafana
+                - targets: ['localhost:9090']
+    - name: Crea ds Grafana
       copy:
-        dest: "./volumi/grafana/config/graf.yml"
+        dest: "./volumi/grafana/ds/graf.yml"
         content: |
           apiVersion: 1
 
@@ -64,6 +75,31 @@
               access: proxy
               url: http://prometheus:9090
               isDefault: true
+    - name: Crea config Grafana
+      copy:
+        dest: "./volumi/grafana/config/graf.ini"
+        content: |
+          [paths]
+          data = /var/lib/grafana
+          [server]
+          protocol = http
+          http_port = 3000
+          enable_gzip = true
+          [database]
+          type = sqlite3
+          path = grafana.db
+          [session]
+          provider = file
+          [analytics]
+          reporting_enabled = false
+          [security]
+          admin_user = admin
+          admin_password = PASS!
+          login_remember_days = 9999
+          [log]
+          mode = console
+          [log.console]
+          level = Trace
     - name: Creazione chiave privata
       community.crypto.openssl_privatekey:
         path: ./volumi/haproxy/certs/cert.pem.key
@@ -131,28 +167,24 @@
         pod: soufe2
         network: cnt_int
         command: >
+          --web.enable-remote-write-receiver
           --config.file=/etc/prometheus/prometheus.yml
           --storage.tsdb.path=/prometheus
         volume:
           - ./volumi/prometheus/config/prom.yml:/etc/prometheus/prometheus.yml:z
           - ./volumi/prometheus/data:/prometheus:z
-        expose:
-          - 9090
-        ports:
-          - "9090:9090"
     - name: Crea container Grafana
       containers.podman.podman_container:
         name: Grafana
         image: grafana/grafana
         pod: soufe2
         network: cnt_int
+        env:
+          GF_PATHS_CONFIG: "/etc/grafana/grafana.ini"
         volume:
+          - ./volumi/grafana/config/graf.ini:/etc/grafana/grafana.ini:z
           - ./volumi/grafana/data:/var/lib/grafana:z
-          - ./volumi/grafana/config/:/etc/grafana/provisioning/:z
-        expose:
-          - 3000
-        ports:
-          - "3000:3000"
+          - ./volumi/grafana/ds/:/etc/grafana/provisioning/datasources/:z
     - name: Crea istanza HAProxy
       containers.podman.podman_container:
         name: HAProxy
