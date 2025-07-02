@@ -41,10 +41,19 @@ Il Playbook si occupa di eseguire le seguenti task
   - Specificato nel comando iniziale cartella dove salvare i dati
   - Specificato nel comando iniziale il file di config
   - Specificato nel comando iniziale  --web.enable-remote-write-receiver per abilitare la ricezione dati da prometheus da altri agenti per usi futuri
+
+  **IMPORTANTE:** Grafana sarà accessibile da https://grafana.local:8443 e Prometheus da https://prometheus.local:8443.
+  
+  **È necessario configurare questi nomi nel proprio file hosts per poter essere in grado di risolverli come di seguito**
+  ```
+  127.0.0.1 prometheus.local
+  127.0.0.1 grafana.local
+  ```
 ## 🔜 TO-DO
 - [ ] Configurare Prometheus per raccolta dati host
 - [ ] Messa in sicurezza interna di Grafana e Prometheus
 - [ ] Creazione Automatizzata Dashboard Custom
+- [ ] Aggiunta automatica al file hosts
 
 ---
 
